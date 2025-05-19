@@ -1,0 +1,12 @@
+<!-- purchase_product.html -->
+<h3>{{ product.name }} - 购买</h3>
+<form method="POST">
+    {% csrf_token %}
+    <label for="quantity">数量:</label>
+    <input type="number" name="quantity" min="1" required>
+
+    <label for="address">收货地址:</label>
+    <input type="text" name="address" required>
+
+    <button type="submit">确认购买</button>
+</form>

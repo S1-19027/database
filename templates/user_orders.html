@@ -1,0 +1,10 @@
+<!-- user_orders.html -->
+<h3>我的订单</h3>
+<ul>
+    {% for order in orders %}
+        <li>
+            {{ order.product.name }} - ¥{{ order.total_amount }}
+            <a href="{% url 'cancel_order' order.order_id %}">取消订单</a>
+        </li>
+    {% endfor %}
+</ul>

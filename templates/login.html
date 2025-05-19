@@ -1,0 +1,11 @@
+<!-- login.html -->
+<form method="post">
+    {% csrf_token %}
+    <input type="text" name="username" placeholder="用户名/账号" required>
+    <input type="password" name="password" placeholder="密码" required>
+    <select name="user_type">
+        <option value="user">普通用户</option>
+        <option value="staff">客服人员</option>
+    </select>
+    <button type="submit">登录</button>
+</form>
