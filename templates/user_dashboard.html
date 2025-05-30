@@ -244,185 +244,192 @@
     </div>
 
     <script>
-                        function toggleProductList() {
-                          const list = document.getElementById("product-list");
-                          list.style.display = list.style.display === "none" ? "flex" : "none";
-                        }
+                                function toggleProductList() {
+                                  const list = document.getElementById("product-list");
+                                  list.style.display = list.style.display === "none" ? "flex" : "none";
+                                }
 
-                        // 聊天表单AJAX提交
-                        document
-                          .getElementById("chatForm").addEventListener("submit", function (e) {
-                            e.preventDefault();
-                            const form = this;
-                            const input = document.getElementById("messageInput");
-                            const message = input.value.trim();
-                            const chatHistory = document.getElementById("chatHistory");
-                            if (message) {
-                              document.getElementById("loadingIndicator").style.display = "block";
-                              form.querySelector('button[type="submit"]').disabled = true;
-                                    const isHuman = {{ consultation.customer_service|yesno:"true,false" }};
-                              const chatUrl = isHuman
-                              ? "{% url 'human_chat' consultation.consultation_id %}"
-                              : "{% url 'ai_chat' %}";
+                                // 聊天表单AJAX提交
+                                document
+                                  .getElementById("chatForm").addEventListener("submit", function (e) {
+                                    e.preventDefault();
+                                    const form = this;
+                                    const input = document.getElementById("messageInput");
+                                    const message = input.value.trim();
+                                    const chatHistory = document.getElementById("chatHistory");
+                                    if (message) {
+                                      document.getElementById("loadingIndicator").style.display = "block";
+                                      form.querySelector('button[type="submit"]').disabled = true;
+                                            const isHuman = {{ consultation.customer_service|yesno:"true,false" }};
+                                      const chatUrl = isHuman
+                                      ? "{% url 'human_chat' consultation.consultation_id %}"
+                                      : "{% url 'ai_chat' %}";
 
-                              fetch(chatUrl, {
-                                method: "POST",
-                                body: new FormData(form),
-                                headers: {
-                                  "X-Requested-With": "XMLHttpRequest",  // 标识AJAX请求
-                                  "X-CSRFToken": form.querySelector("[name=csrfmiddlewaretoken]")
-                                    .value,
-                                },
-                                credentials: "include", // 关键！确保携带 Cookie
-                              })
-                                .then((response) => {
-                                  if (response.redirected) {
-                                    window.location.href = response.url;
+                                      fetch(chatUrl, {
+                                        method: "POST",
+                                        body: new FormData(form),
+                                        headers: {
+                                          "X-Requested-With": "XMLHttpRequest",  // 标识AJAX请求
+                                          "X-CSRFToken": form.querySelector("[name=csrfmiddlewaretoken]")
+                                            .value,
+                                        },
+                                        credentials: "include", // 关键！确保携带 Cookie
+                                      })
+                                        .then((response) => {
+                                          if (response.redirected) {
+                                            window.location.href = response.url;
+                                            return;
+                                          }
+                                          return response.json();
+                                          const contentType = response.headers.get("content-type");
+                                          if (
+                                            contentType &&
+                                            contentType.indexOf("application/json") !== -1
+                                          ) {
+                                            return response.json();
+                                          } else {
+                                            throw new Error("服务器未返回JSON,可能未登录或发生错误");
+                                          }
+                                        })
+                                        .then((data) => {
+                                          if (!data) return;
+                                          if (data.success) {
+                                            input.value=""
+                                            refreshChat();
+                                          } else {
+                                            alert("发送失败: " + (data.error || "未知错误"));
+                                          }
+                                        })
+                                        .catch((error) => {
+                                          console.error("Error:", error);
+                                          alert("发送失败: " + error.message);
+                                        })
+                                        .finally(() => {
+                                          document.getElementById("loadingIndicator").style.display =
+                                            "none";
+                                          form.querySelector('button[type="submit"]').disabled = false;
+                                        });
+                                    }
+                                  });
+
+                                function clearChat() {
+                                  if (confirm("确定要清空当前对话历史吗？")) {
+                                      document.cookie = "hide_chat_history=1;path=/";
+                                      document.getElementById("chatHistory").innerHTML ='<div style="color:gray;text-align:center;">对话已清空</div>';
+
+                                    fetch("{% url 'clear_chat' %}", {
+                                      method: "POST",
+                                      headers: {
+                                        "X-CSRFToken": "{{ csrf_token }}",
+                                        "Content-Type": "application/json",
+                                      },
+                                    })
+                                      .then((response) => response.json())
+                                      .then((data) => {
+                                        if (data.success) {
+      document.cookie = "hide_chat_history=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      input.value = "";
+      refreshChat();
+                                        }
+                                      });
+
+                                      {% comment %} document.cookie = "hide_chat_history=1;path=/"; {% endcomment %}
+                                  }
+                                }
+                                function requestHumanService() {
+                                  fetch("{% url 'request_human_service' %}", {
+                                    method: "POST",
+                                    headers: {
+                                      "X-CSRFToken": "{{ csrf_token }}",
+                                      "Content-Type": "application/json",
+                                    },
+                                  })
+                                    .then((response) => response.json())
+                                    .then((data) => {
+                                      if (data.success) {
+                                        alert("已请求人工客服，请等待接入。");
+                                      } else {
+                                        alert("请求失败: " + (data.error || "未知错误"));
+                                      }
+                                    });
+                                }
+                                function sendOrderToChat() {
+                                  const orderId = document.getElementById("orderSelect").value;
+                                  if (!orderId) {
+                                    alert("请选择订单");
                                     return;
                                   }
-                                  return response.json();
-                                  const contentType = response.headers.get("content-type");
-                                  if (
-                                    contentType &&
-                                    contentType.indexOf("application/json") !== -1
-                                  ) {
-                                    return response.json();
-                                  } else {
-                                    throw new Error("服务器未返回JSON,可能未登录或发生错误");
-                                  }
-                                })
-                                .then((data) => {
-                                  if (!data) return;
-                                  if (data.success) {
-                                    input.value=""
-                                    refreshChat();
-                                  } else {
-                                    alert("发送失败: " + (data.error || "未知错误"));
-                                  }
-                                })
-                                .catch((error) => {
-                                  console.error("Error:", error);
-                                  alert("发送失败: " + error.message);
-                                })
-                                .finally(() => {
-                                  document.getElementById("loadingIndicator").style.display =
-                                    "none";
-                                  form.querySelector('button[type="submit"]').disabled = false;
-                                });
-                            }
-                          });
-
-                        function clearChat() {
-                          if (confirm("确定要清空当前对话历史吗？")) {
-
-                            fetch("{% url 'clear_chat' %}", {
-                              method: "POST",
-                              headers: {
-                                "X-CSRFToken": "{{ csrf_token }}",
-                                "Content-Type": "application/json",
-                              },
-                            })
-                              .then((response) => response.json())
-                              .then((data) => {
-                                if (data.success) {
-                                           document.getElementById("chatHistory").innerHTML ='<div style="color:gray;text-align:center;">对话已清空</div>';
-
+                                  fetch("{% url 'send_order_to_chat' %}", {
+                                    method: "POST",
+                                    headers: {
+                                      "X-CSRFToken": "{{ csrf_token }}",
+                                      "Content-Type": "application/x-www-form-urlencoded",
+                                    },
+                                    body: "order_id=" + encodeURIComponent(orderId),
+                                  })
+                                    .then((response) => response.json())
+                                    .then((data) => {
+                                      if (data.success) {
+                                        alert("订单已发送到对话！");
+                                        window.location.reload();
+                                      } else {
+                                        alert("发送失败: " + (data.error || "未知错误"));
+                                      }
+                                    });
                                 }
-                              });
-
-                              {% comment %} document.cookie = "hide_chat_history=1;path=/"; {% endcomment %}
+                                function scrollToBottom() {
+                              const chatHistory = document.getElementById("chatHistory");
+                              chatHistory.scrollTop = chatHistory.scrollHeight;
                           }
-                        }
-                        function requestHumanService() {
-                          fetch("{% url 'request_human_service' %}", {
-                            method: "POST",
-                            headers: {
-                              "X-CSRFToken": "{{ csrf_token }}",
-                              "Content-Type": "application/json",
-                            },
-                          })
-                            .then((response) => response.json())
-                            .then((data) => {
-                              if (data.success) {
-                                alert("已请求人工客服，请等待接入。");
-                              } else {
-                                alert("请求失败: " + (data.error || "未知错误"));
-                              }
-                            });
-                        }
-                        function sendOrderToChat() {
-                          const orderId = document.getElementById("orderSelect").value;
-                          if (!orderId) {
-                            alert("请选择订单");
-                            return;
+                            function showEndDialog() {
+                      document.getElementById("endDialog").style.display = "flex";
+                    }
+                    function closeEndDialog() {
+                      document.getElementById("endDialog").style.display = "none";
+                    }
+                    function submitEndConsultation() {
+                      const rating = document.getElementById("ratingSelect").value;
+                      fetch("{% url 'end_consultation' consultation.consultation_id %}", {
+                        method: "POST",
+                        headers: {
+                          "X-CSRFToken": "{{ csrf_token }}",
+                          "Content-Type": "application/x-www-form-urlencoded",
+                        },
+                        body: "rating=" + encodeURIComponent(rating),
+                      })
+                        .then((response) => response.json())
+                        .then((data) => {
+                          if (data.success) {
+                            alert("感谢您的评价，已结束本次人工客服服务！");
+                            closeEndDialog();
+                            window.location.reload(); // 刷新页面，回到AI客服
+                          } else {
+                            alert("操作失败: " + (data.error || "未知错误"));
                           }
-                          fetch("{% url 'send_order_to_chat' %}", {
-                            method: "POST",
-                            headers: {
-                              "X-CSRFToken": "{{ csrf_token }}",
-                              "Content-Type": "application/x-www-form-urlencoded",
-                            },
-                            body: "order_id=" + encodeURIComponent(orderId),
-                          })
-                            .then((response) => response.json())
-                            .then((data) => {
-                              if (data.success) {
-                                alert("订单已发送到对话！");
-                                window.location.reload();
-                              } else {
-                                alert("发送失败: " + (data.error || "未知错误"));
-                              }
-                            });
-                        }
-                        function scrollToBottom() {
-                      const chatHistory = document.getElementById("chatHistory");
-                      chatHistory.scrollTop = chatHistory.scrollHeight;
-                  }
-                    function showEndDialog() {
-              document.getElementById("endDialog").style.display = "flex";
-            }
-            function closeEndDialog() {
-              document.getElementById("endDialog").style.display = "none";
-            }
-            function submitEndConsultation() {
-              const rating = document.getElementById("ratingSelect").value;
-              fetch("{% url 'end_consultation' consultation.consultation_id %}", {
-                method: "POST",
-                headers: {
-                  "X-CSRFToken": "{{ csrf_token }}",
-                  "Content-Type": "application/x-www-form-urlencoded",
-                },
-                body: "rating=" + encodeURIComponent(rating),
-              })
-                .then((response) => response.json())
-                .then((data) => {
-                  if (data.success) {
-                    alert("感谢您的评价，已结束本次人工客服服务！");
-                    closeEndDialog();
-                    window.location.reload(); // 刷新页面，回到AI客服
-                  } else {
-                    alert("操作失败: " + (data.error || "未知错误"));
-                  }
-                });
-            }
-                        function refreshChat() {
-                          fetch("{% url 'get_chat_history' consultation.consultation_id %}")
-                            .then((response) => {
-                              if (!response.ok) throw new Error("Network response was not ok");
-                              return response.text();
-                            })
-                            .then((html) => {
-                              document.getElementById("chatHistory").innerHTML = html;
-                              scrollToBottom&scrollToBottom();
-                            })
-                            .catch((error) => {
-                              console.error("刷新聊天记录失败:", error);
-                            });
-                        }
-                        setInterval(refreshChat, 2000); // 每2秒刷新一次
-                        window.addEventListener("DOMContentLoaded", function() {
-        refreshChat();
-      });
+                        });
+                    }
+                                function refreshChat() {
+                                    if (document.cookie.indexOf("hide_chat_history=1") !== -1) {
+            document.getElementById("chatHistory").innerHTML = "<div style='color:gray;text-align:center;'>对话已清空</div>";
+            return;
+          }
+                                  fetch("{% url 'get_chat_history' consultation.consultation_id %}")
+                                    .then((response) => {
+                                      if (!response.ok) throw new Error("Network response was not ok");
+                                      return response.text();
+                                    })
+                                    .then((html) => {
+                                      document.getElementById("chatHistory").innerHTML = html;
+                                      scrollToBottom&scrollToBottom();
+                                    })
+                                    .catch((error) => {
+                                      console.error("刷新聊天记录失败:", error);
+                                    });
+                                }
+                                setInterval(refreshChat, 2000); // 每2秒刷新一次
+                                window.addEventListener("DOMContentLoaded", function() {
+                refreshChat();
+              });
     </script>
   </body>
 </html>
