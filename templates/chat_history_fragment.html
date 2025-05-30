@@ -1,0 +1,15 @@
+<!-- filepath: f:\database\netshop2\templates\chat_history_fragment.html -->
+{% for msg in chat_history %}
+<div
+  class="message {% if msg.role == 'user' %}user-message{% elif msg.role == 'ai' %}ai-message{% else %}human-message{% endif %}"
+>
+  <strong>
+    {% if msg.role == 'user' %}我 {% elif msg.role == 'ai' %}AI客服 {% else
+    %}人工客服 {% endif %} :</strong
+  >
+  {{ msg.content|linebreaksbr }}
+  <span class="message-time">{{ msg.time|date:"H:i" }}</span>
+</div>
+{% empty %}
+<div class="message">暂无消息</div>
+{% endfor %}

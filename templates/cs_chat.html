@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+  <head>
+    <meta charset="UTF-8" />
+    <title>客服对话界面 - {{ consultation.user.username }}</title>
+    <style>
+      body {
+        font-family: "Microsoft YaHei", Arial, sans-serif;
+        background: #f5f6fa;
+        margin: 0;
+        padding: 20px;
+      }
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        background: #fff;
+        border-radius: 10px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        padding: 30px;
+      }
+      .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      h2 {
+        color: #333;
+        margin: 0;
+      }
+      .back-link {
+        color: #4285f4;
+        text-decoration: none;
+        font-weight: bold;
+      }
+      .chat-history {
+        height: 400px;
+        overflow-y: auto;
+        background: #fafafa;
+        border-radius: 8px;
+        border: 1px solid #eee;
+        padding: 15px;
+        margin-bottom: 20px;
+      }
+      .message {
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid #eee;
+      }
+      .user-message {
+        color: #4285f4;
+      }
+      .staff-message {
+        color: #0f9d58;
+      }
+      .message-time {
+        font-size: 0.8em;
+        color: #999;
+        margin-left: 10px;
+      }
+      form {
+        display: flex;
+        flex-direction: column;
+      }
+      textarea {
+        width: 100%;
+        min-height: 80px;
+        border-radius: 6px;
+        border: 1px solid #ddd;
+        padding: 10px;
+        font-size: 15px;
+        margin-bottom: 10px;
+        resize: vertical;
+      }
+      .input-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+      }
+      button {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .send-button {
+        background: #4285f4;
+        color: white;
+      }
+      .send-button:hover {
+        background: #3367d6;
+      }
+      .clear-button {
+        background: #f1f1f1;
+        color: #333;
+      }
+      .clear-button:hover {
+        background: #e1e1e1;
+      }
+      .order-button {
+        background: #fbbc05;
+        color: #333;
+      }
+      .order-button:hover {
+        background: #e9ab00;
+      }
+      #loadingIndicator {
+        margin-top: 10px;
+        color: #4285f4;
+        display: none;
+      }
+      .user-info {
+        background: #f1f8fe;
+        padding: 10px;
+        border-radius: 6px;
+        margin-bottom: 15px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="top-bar">
+        <h2>与用户 {{ consultation.user.username }} 的对话</h2>
+        <a
+          href="{% url 'customer_service_dashboard' staff.staff_id %}"
+          class="back-link"
+          >返回客服面板</a
+        >
+      </div>
+
+      <div class="user-info">
+        <p><strong>用户ID:</strong> {{ consultation.user.user_id }}</p>
+        <p>
+          <strong>联系方式:</strong> {{ consultation.user.phone|default:"未提供"
+          }}
+        </p>
+      </div>
+
+      <div class="chat-history" id="chatHistory">
+        {% for msg in chat_history %}
+        <div
+          class="message {% if msg.role == 'user' %}user-message{% else %}staff-message{% endif %}"
+        >
+          <strong>
+            {% if msg.role == 'user' %}用户{% else %}客服{% endif %}:
+          </strong>
+          {{ msg.content }}
+          <span class="message-time">{{ msg.time|date:"H:i" }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <form
+        method="post"
+        id="chatForm"
+        action="{% url 'human_chat' consultation.consultation_id %}"
+      >
+        {% csrf_token %}
+        <textarea
+          name="message"
+          id="messageInput"
+          required
+          placeholder="输入回复内容..."
+        ></textarea>
+
+        <div class="input-actions">
+          <button type="button" class="clear-button" onclick="clearChat()">
+            清空对话
+          </button>
+          <button
+            type="button"
+            class="order-button"
+            onclick="showOrderSelector()"
+          >
+            发送订单
+          </button>
+          <button type="submit" class="send-button">发送</button>
+        </div>
+
+        <div id="loadingIndicator">发送中...</div>
+      </form>
+
+      <!-- 订单选择模态框 -->
+      <div
+        id="orderModal"
+        style="
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 1000;
+          justify-content: center;
+          align-items: center;
+        "
+      >
+        <div
+          style="
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+          "
+        >
+          <h3>选择订单</h3>
+          <select
+            id="orderSelect"
+            style="width: 100%; padding: 8px; margin: 10px 0"
+          >
+            {% for order in consultation.user.orders.all %}
+            <option value="{{ order.order_id }}">
+              {{ order.product.name }} (¥{{ order.total_amount }}, {{
+              order.created_at|date:"Y-m-d" }})
+            </option>
+            {% empty %}
+            <option value="">该用户暂无订单</option>
+            {% endfor %}
+          </select>
+          <div
+            style="
+              display: flex;
+              justify-content: flex-end;
+              gap: 10px;
+              margin-top: 15px;
+            "
+          >
+            <button
+              type="button"
+              onclick="document.getElementById('orderModal').style.display = 'none'"
+            >
+              取消
+            </button>
+            <button type="button" onclick="sendOrderToChat()">发送</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 聊天表单AJAX提交
+      document
+        .getElementById("chatForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          const form = this;
+          const input = document.getElementById("messageInput");
+          const message = input.value.trim();
+
+          if (message) {
+            document.getElementById("loadingIndicator").style.display = "block";
+            form.querySelector(".send-button").disabled = true;
+
+            fetch("", {
+              // 空字符串表示提交到当前URL
+              method: "POST",
+              body: new FormData(form),
+              headers: {
+                "X-CSRFToken": form.querySelector("[name=csrfmiddlewaretoken]")
+                  .value,
+              },
+              credentials: "include",
+            })
+              .then((response) => {
+                if (response.redirected) {
+                  window.location.href = response.url;
+                  return;
+                }
+                return response.json();
+              })
+              .then((data) => {
+                if (data && data.success) {
+                  input.value = "";
+                  window.location.reload();
+                } else if (data && data.error) {
+                  alert("发送失败: " + data.error);
+                }
+              })
+              .catch((error) => {
+                console.error("Error:", error);
+                alert("发送失败: " + error.message);
+              })
+              .finally(() => {
+                document.getElementById("loadingIndicator").style.display =
+                  "none";
+                form.querySelector(".send-button").disabled = false;
+              });
+          }
+        });
+
+      // 清空对话
+      function clearChat() {
+        if (confirm("确定要清空当前对话历史吗？")) {
+          fetch("{% url 'clear_chat' %}", {
+            method: "POST",
+            headers: {
+              "X-CSRFToken": "{{ csrf_token }}",
+              "Content-Type": "application/json",
+            },
+          })
+            .then((response) => response.json())
+            .then((data) => {
+              if (data.success) {
+                window.location.reload();
+              } else {
+                alert("清空失败: " + (data.error || "未知错误"));
+              }
+            });
+          document.getElementById("chatHistory").innerHTML =
+            '<div style="color:gray;text-align:center;">对话已清空</div>';
+        }
+      }
+
+      // 显示订单选择器
+      function showOrderSelector() {
+        document.getElementById("orderModal").style.display = "flex";
+      }
+
+      // 发送订单到聊天
+      function sendOrderToChat() {
+        const orderId = document.getElementById("orderSelect").value;
+        if (!orderId) {
+          alert("请选择订单");
+          return;
+        }
+
+        fetch("{% url 'send_order_to_cs_chat' %}", {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: `order_id=${orderId}&consultation_id={{ consultation.consultation_id }}`,
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              document.getElementById("orderModal").style.display = "none";
+              window.location.reload();
+            } else {
+              alert("发送失败: " + (data.error || "未知错误"));
+            }
+          });
+      }
+      function refreshChat() {
+        fetch("{% url 'get_chat_history' consultation.consultation_id %}")
+          .then((response) => {
+            if (!response.ok) throw new Error("Network response was not ok");
+            return response.text();
+          })
+          .then((html) => {
+            document.getElementById("chatHistory").innerHTML = html;
+            scrollToBottom & scrollToBottom();
+          })
+          .catch((error) => {
+            console.error("刷新聊天记录失败:", error);
+          });
+      }
+
+      setInterval(refreshChat, 2000); // 每2秒刷新一次
+      // 自动滚动到聊天历史底部
+      const chatHistory = document.getElementById("chatHistory");
+      chatHistory.scrollTop = chatHistory.scrollHeight;
+    </script>
+  </body>
+</html>

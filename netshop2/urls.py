@@ -28,6 +28,57 @@ urlpatterns = [
     path("user_dashboard/", views.user_dashboard, name="user_dashboard"),
     path("purchase_product/", views.purchase_product),
     path("user_orders/", views.user_orders),
+    path("payment/<int:order_id>/", views.payment, name="payment"),
+    path("send_order_to_chat/", views.send_order_to_chat, name="send_order_to_chat"),
+    path(
+        "customer_service_dashboard/<int:staff_id>/",
+        views.customer_service_dashboard,
+        name="customer_service_dashboard",
+    ),
+    path(
+        "request_human_service/",
+        views.request_human_service,
+        name="request_human_service",
+    ),
+    path(
+        "send_order_to_cs_chat/",
+        views.send_order_to_cs_chat,
+        name="send_order_to_cs_chat",
+    ),
+    path("human_chat/<int:consultation_id>/", views.human_chat, name="human_chat"),
+    path(
+        "accept_consultation/<int:consultation_id>/",
+        views.accept_consultation,
+        name="accept_consultation",
+    ),
+    path("cs_chat/<int:consultation_id>/", views.cs_chat, name="cs_chat"),
+    path(
+        "request_human_service/",
+        views.request_human_service,
+        name="request_human_service",
+    ),
+    path(
+        "get_chat_history/<int:consultation_id>/",
+        views.get_chat_history,
+        name="get_chat_history",
+    ),
+    path(
+        "end_consultation/<int:consultation_id>/",
+        views.end_consultation,
+        name="end_consultation",
+    ),
+    path(
+        "end_consultation_by_staff/<int:consultation_id>/",
+        views.end_consultation_by_staff,
+        name="end_consultation_by_staff",
+    ),
+
+    path(
+        "hide_consultation/<int:consultation_id>/",
+        views.hide_consultation,
+        name="hide_consultation",
+    ),
+    path("human_chat/", views.human_chat, name="human_chat"),
     # # API端点
     path("ai_chat/", views.ai_chat_view, name="ai_chat"),
     path("clear_chat/", views.clear_chat, name="clear_chat"),

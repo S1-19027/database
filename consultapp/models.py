@@ -25,8 +25,10 @@ from django.core.validators import MinValueValidator, MaxValueValidator
 
 class Human_CustomerService(models.Model):
     staff_id = models.AutoField(primary_key=True)
-    username = models.CharField(max_length=50, unique=True,default='cy')
-    password = models.CharField(max_length=128,default='123456')  # 建议用Django的make_password加密
+    username = models.CharField(max_length=50, unique=True, default="cy")
+    password = models.CharField(
+        max_length=128, default="123456"
+    )  # 建议用Django的make_password加密
     online_status = models.BooleanField(default=False, db_index=True)
     rating = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(5)])
 
@@ -50,7 +52,7 @@ class Consultation(models.Model):
     user_rating = models.FloatField(
         validators=[MinValueValidator(0), MaxValueValidator(5)], null=True, blank=True
     )
-
+    is_hidden = models.BooleanField(default=False)
     class Meta:
         db_table = "consultation"
         indexes = [
@@ -86,11 +88,12 @@ class ConversationRecord(models.Model):
     )
     consultation = models.ForeignKey(Consultation, on_delete=models.CASCADE)
     ROLE_CHOICES = (
-        ('user', '用户'),
-        ('ai', 'AI客服'),
-        ('human', '人工客服'),
+        ("user", "用户"),
+        ("ai", "AI客服"),
+        ("human", "人工客服"),
     )
-    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='user')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default="user")
+
     class Meta:
         db_table = "conversation_record"
         indexes = [

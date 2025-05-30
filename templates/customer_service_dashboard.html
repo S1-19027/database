@@ -1,0 +1,74 @@
+<!-- filepath: f:\database\netshop2\templates\customer_service_dashboard.html -->
+<h2>人工客服工作台</h2>
+<h3>待接入会话</h3>
+<ul>
+  {% for c in waiting_consultations %}
+  <li>
+    用户: {{ c.user.username }}，发起时间: {{ c.consultation_time }}
+    <a href="{% url 'accept_consultation' c.consultation_id %}">接入</a>
+    <button type="button" onclick="hideConsultation({{ c.consultation_id }})">
+      隐藏
+    </button>
+  </li>
+  {% empty %}
+  <li>暂无待处理会话</li>
+  {% endfor %}
+</ul>
+<h3>我正在处理的会话</h3>
+<ul>
+  {% for c in my_consultations %}
+  <li>
+    用户: {{ c.user.username }}，发起时间: {{ c.consultation_time }}
+    <a href="{% url 'cs_chat' c.consultation_id %}">进入对话</a>
+    <button
+      type="button"
+      onclick="endConsultationByStaff({{ c.consultation_id }})"
+    >
+      结束会话
+    </button>
+  </li>
+  {% empty %}
+  <li>暂无会话</li>
+  {% endfor %}
+  <script>
+    function endConsultationByStaff(consultationId) {
+      if (confirm("确定要结束该会话吗？")) {
+        fetch("/end_consultation_by_staff/" + consultationId + "/", {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json",
+          },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              alert("会话已结束！");
+              window.location.reload();
+            } else {
+              alert("操作失败: " + (data.error || "未知错误"));
+            }
+          });
+      }
+    }
+    function hideConsultation(consultationId) {
+      if (confirm("确定要隐藏该待接入会话吗？")) {
+        fetch("/hide_consultation/" + consultationId + "/", {
+          method: "POST",
+          headers: {
+            "X-CSRFToken": "{{ csrf_token }}",
+            "Content-Type": "application/json",
+          },
+        })
+          .then((response) => response.json())
+          .then((data) => {
+            if (data.success) {
+              window.location.reload();
+            } else {
+              alert("操作失败: " + (data.error || "未知错误"));
+            }
+          });
+      }
+    }
+  </script>
+</ul>
